@@ -28,6 +28,10 @@ def score_window(frames_np, backbone, lstm, device):
     
     Returns: spatial_score (float), temporal_score (float)
     """
+    backbone.eval()
+    if lstm:
+        lstm.eval()
+
     B, T, C, H, W = 1, 20, 3, 224, 224
     
     # Process inputs onto device
@@ -35,7 +39,21 @@ def score_window(frames_np, backbone, lstm, device):
     inputs = inputs.view(B*T, C, H, W)
 
     with torch.no_grad():
-        with torch.amp.autocast('cuda' if device.type == 'cuda' else 'cpu'):
+        if device.type == 'cuda':
+            with torch.amp.autocast('cuda'):
+                # 1. Spatial Forward Pass
+                features = backbone.forward_features(inputs)
+                features = backbone.global_pool(features) # [B*T, 1792]
+                
+                # Predict spatial severity (mean across 20 frames)
+                frame_logits = backbone.get_classifier()(features)
+                spatial_score = torch.sigmoid(frame_logits).mean().item()
+                
+                # 2. Reshape and Temporal Forward Pass (Resident on GPU)
+                features_seq = features.view(B, T, -1) # [1, 20, 1792]
+                temporal_logits = lstm(features_seq)
+                temporal_score = torch.sigmoid(temporal_logits).item()
+        else:
             # 1. Spatial Forward Pass
             features = backbone.forward_features(inputs)
             features = backbone.global_pool(features) # [B*T, 1792]
@@ -53,8 +71,5 @@ def score_window(frames_np, backbone, lstm, device):
     # Del inputs and intermediate activations permanently
     del inputs, features, frame_logits, features_seq, temporal_logits
     gc.collect()
-    
-    if device.type == 'cuda':
-        torch.cuda.empty_cache()
         
     return spatial_score, temporal_score

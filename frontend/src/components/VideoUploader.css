@@ -1,0 +1,122 @@
+.uploader-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.drop-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.drop-zone:hover:not(.has-file) {
+  border-color: var(--accent-cyan);
+  background-color: var(--accent-cyan-dim);
+}
+
+.drop-zone.active {
+  border-color: var(--accent-cyan);
+  background-color: var(--accent-cyan-dim);
+  transform: scale(1.02);
+}
+
+.drop-zone.has-file {
+  padding: 1.5rem;
+  border-style: solid;
+  cursor: default;
+}
+
+.icon-container {
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  transition: color var(--transition-fast);
+}
+
+.drop-zone:hover .icon-container {
+  color: var(--accent-cyan);
+}
+
+.drop-prompt h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.drop-prompt p {
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.format-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.file-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+}
+
+.accent-icon {
+  color: var(--accent-cyan);
+}
+
+.file-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  word-break: break-all;
+}
+
+.file-size {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.clear-btn:hover {
+  background-color: rgba(255, 68, 68, 0.1);
+  color: var(--status-error);
+}
+
+.clear-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uploader-error {
+  color: var(--status-error);
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: -0.5rem;
+}
+
+.analyze-btn {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+}

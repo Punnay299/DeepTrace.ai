@@ -1,0 +1,68 @@
+.progress-panel {
+  text-align: center;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.progress-spinner-container {
+  color: var(--accent-cyan);
+  margin-bottom: 0.5rem;
+  animation: pulse 2s infinite;
+}
+
+.progress-spinner {
+  animation: spin 2s linear infinite;
+}
+
+.progress-title {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.progress-status {
+  font-size: 1.1rem;
+  color: var(--accent-cyan);
+  font-weight: 500;
+}
+
+.progress-bar-container {
+  width: 100%;
+  max-width: 400px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-indeterminate {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  height: 100%;
+  width: 50%;
+  background-color: var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  animation: progressMove 1.5s infinite ease-in-out;
+}
+
+.progress-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 80%;
+  line-height: 1.6;
+  margin-top: 1rem;
+}
+
+@keyframes progressMove {
+  0% {
+    left: -50%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}

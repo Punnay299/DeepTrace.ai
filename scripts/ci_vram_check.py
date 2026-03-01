@@ -23,9 +23,9 @@ def main():
     scaler = torch.amp.GradScaler('cuda')
     criterion = nn.BCEWithLogitsLoss()
 
-    # Simulate 1 batch of data: Batch Size = 4, Sequence Length = 20
-    # Shape: [4, 20, 3, 224, 224]
-    B, T, C, H, W = 4, 20, 3, 224, 224
+    # Simulate 1 batch of data: Batch Size = 2, Sequence Length = 20
+    # Shape: [2, 20, 3, 224, 224] (safe for 8GB VRAM with EfficientNet-B4)
+    B, T, C, H, W = 2, 20, 3, 224, 224
     
     # Create dummy tensors mapped directly to GPU
     batch_tensors = torch.randn(B, T, C, H, W, device=device)
