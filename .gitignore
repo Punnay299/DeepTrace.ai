@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PyTorch / Models
+*.pth
+*.pt
+*.ckpt
+*.onnx
+models/pretrained/
+models/weights/
+
+# Datasets and Video Files
+dataset/raw/
+dataset/labels/
+temp/
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.wav
+
+# Logs and Metrics
+*.log
+runs/
+lightning_logs/
+wandb/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# FastAPI / Backends
+*.db
+*.sqlite3
+
+# Project Specific
+windows_index*.csv
+validated_videos*.csv
+injection_log*.csv
