@@ -4,6 +4,7 @@ import uuid
 import shutil
 import subprocess
 import json
+import queue
 import torch
 from fastapi import APIRouter, File, UploadFile, Request, HTTPException
 
@@ -49,8 +50,8 @@ def validate_video(file_path: str):
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="Could not safely parse video duration.")
         
-    if duration > 60.0:
-        raise HTTPException(status_code=400, detail="Video duration exceeds 60s limit.")
+    if duration > 300.0:
+        raise HTTPException(status_code=400, detail="Video duration exceeds 5 minute (300s) limit.")
 
     # FPS Safety Guard
     fps_str = video_stream.get("r_frame_rate", "0/0")
@@ -93,7 +94,6 @@ async def process_video(request: Request, file: UploadFile = File(...)):
             "temp_path": temp_path
         }
         
-        import queue
         request.app.state.job_queue.put_nowait(job_dict)
         
         return {"job_id": job_id, "status": "QUEUED"}

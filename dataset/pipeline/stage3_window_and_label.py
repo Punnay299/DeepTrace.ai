@@ -4,6 +4,9 @@ import logging
 import argparse
 import numpy as np
 import pandas as pd
+import cv2
+import torch
+import gc
 from pathlib import Path
 from tqdm import tqdm
 from decord import VideoReader, cpu
@@ -86,12 +89,28 @@ def process_video(video_path, video_id, class_label, injection_df, mtcnn):
         window_boxes = []
         window_confs = []
         
+        # Max dimension to feed into MTCNN without crashing 8GB VRAM
+        MAX_DIM = 720 
+        
         for frame in frames:
-            boxes, probs = mtcnn.detect(frame)
+            orig_h, orig_w, _ = frame.shape
+            scale_ratio = 1.0
+            
+            if max(orig_h, orig_w) > MAX_DIM:
+                scale_ratio = MAX_DIM / max(orig_h, orig_w)
+                new_w = int(orig_w * scale_ratio)
+                new_h = int(orig_h * scale_ratio)
+                detect_frame = cv2.resize(frame, (new_w, new_h))
+            else:
+                detect_frame = frame
+                
+            boxes, probs = mtcnn.detect(detect_frame)
             if boxes is not None:
                 for box, prob in zip(boxes, probs):
                     if prob is not None and prob > 0.0:
-                        window_boxes.append(box)
+                        # Scale back to original dimensions
+                        real_box = box / scale_ratio
+                        window_boxes.append(real_box)
                         window_confs.append(prob)
                         
         face_detected = 0
@@ -159,6 +178,10 @@ def process_video(video_path, video_id, class_label, injection_df, mtcnn):
         win_start_sec += STRIDE_SEC
         window_id += 1
         
+    # Free memory
+    del vr
+    gc.collect()
+    
     return rows
 
 def main():
@@ -201,6 +224,9 @@ def main():
             
         windows = process_video(video_path, video_id, class_label, inj_df, mtcnn)
         all_windows.extend(windows)
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     # Save output
     os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)

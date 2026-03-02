@@ -53,10 +53,25 @@ def stream_crops(video_path, window_sec=4.0, stride_sec=2.0, fps=5, target_size=
             
             # Tracking
             boxes_collected = []
+            MAX_DIM = 720
+            
             for f in window_frames:
-                boxes, probs = mtcnn.detect(f)
+                orig_h, orig_w, _ = f.shape
+                scale_ratio = 1.0
+                
+                if max(orig_h, orig_w) > MAX_DIM:
+                    scale_ratio = MAX_DIM / max(orig_h, orig_w)
+                    new_w = int(orig_w * scale_ratio)
+                    new_h = int(orig_h * scale_ratio)
+                    detect_frame = cv2.resize(f, (new_w, new_h))
+                else:
+                    detect_frame = f
+                    
+                boxes, probs = mtcnn.detect(detect_frame)
                 if boxes is not None:
-                    boxes_collected.append(boxes[0])
+                    # scale box back to physical dimensions
+                    real_box = boxes[0] / scale_ratio
+                    boxes_collected.append(real_box)
                     
             cropped_frames = []
             

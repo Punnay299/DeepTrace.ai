@@ -28,9 +28,10 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device, epo
             param.requires_grad = True
 
     running_loss = 0.0
+    total_samples = 0
     progress_bar = tqdm(dataloader, desc=f"Epoch {epoch} Training")
     
-    optimizer.zero_grad()
+    optimizer.zero_grad(set_to_none=True)
     
     for batch_idx, (batch_tensors, batch_labels, _) in enumerate(progress_bar):
         batch_tensors = batch_tensors.to(device)  # [B, T, C, H, W]
@@ -38,29 +39,44 @@ def train_one_epoch(model, dataloader, criterion, optimizer, scaler, device, epo
         
         B, T, C, H, W = batch_tensors.shape
         assert [H, W] == [224, 224], f"Tensors drifted from 224px. Shape: {batch_tensors.shape}"
-        x = batch_tensors.view(B*T, C, H, W) # [B*T, C, H, W]
         
-        # Mixed Precision Forward
-        with torch.amp.autocast('cuda'):
-            logits = model(x) # [B*T, 1]
-            logits_reshaped = logits.view(B, T, -1).mean(dim=1) # Mean across Time -> [B, 1]
-            loss = criterion(logits_reshaped, batch_labels) / accum_steps
+        # Micro-batching: Process one sequence at a time to prevent OOM
+        # In Phase 2, the autograd graph for 80 high-res frames exceeds 8GB. 
+        # Processing 20 frames per backward pass keeps memory safely under VRAM limits.
+        batch_loss = 0.0
+        for i in range(B):
+            video_x = batch_tensors[i] # [T, C, H, W]
+            video_label = batch_labels[i:i+1] # [1, 1]
             
-        scaler.scale(loss).backward()
-        
+            with torch.amp.autocast('cuda'):
+                video_logits = model(video_x) # [T, 1]
+                video_logits_reshaped = video_logits.mean(dim=0, keepdim=True) # [1, 1]
+                # Scale loss to reflect mean reduction across the entire batch (B elements)
+                loss = criterion(video_logits_reshaped, video_label)
+                scaled_loss = loss / (accum_steps * B)
+                
+            scaler.scale(scaled_loss).backward()
+            batch_loss += loss.item()
+            
+            # Immediately clear autograd activations for this single sequence
+            del video_x, video_logits, video_logits_reshaped, loss, scaled_loss
+            
         if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1 == len(dataloader)):
             scaler.step(optimizer)
             scaler.update()
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True) # More efficient than zero_grad()
             
-        running_loss += loss.item() * accum_steps * B
+        running_loss += batch_loss * B
+        total_samples += B
         
+        del batch_tensors, batch_labels
         if not freeze_backbone and batch_idx % 20 == 0:
+            torch.cuda.empty_cache()
             print(f" [VRAM Profiling] Peak Allocated: {torch.cuda.max_memory_allocated() / 1e9:.2f} GB")
             
-        progress_bar.set_postfix({'loss': running_loss / ((batch_idx + 1) * B)})
+        progress_bar.set_postfix({'loss': running_loss / total_samples})
         
-    return running_loss / len(dataloader.dataset)
+    return running_loss / total_samples
 
 def validate(model, dataloader, criterion, device):
     model.eval()
@@ -86,6 +102,9 @@ def validate(model, dataloader, criterion, device):
             preds = (probs > 0.5).float()
             correct += (preds == batch_labels).sum().item()
             total += B
+            
+            # Flush Validation activations
+            del x, logits, logits_reshaped, loss
             
     val_loss = running_loss / total
     val_acc = correct / total
@@ -149,12 +168,15 @@ def main():
         scheduler.step(val_loss)
         
         # Save checkpoints
+        print(f"Current Best Val Loss: {best_val_loss:.4f} | This Epoch Val Loss: {val_loss:.4f}")
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             torch.save(model.state_dict(), 'models/efficientnet_b4_best.pth')
-            print("Saved Best Model!")
+            print("--> OVERWROTE efficientnet_b4_best.pth (New Best Model!)")
             
         torch.save(model.state_dict(), 'models/efficientnet_b4_latest.pth')
+        torch.save(model.state_dict(), f'models/efficientnet_b4_epoch_{epoch}.pth')
+        print(f"--> Saved checkpoint: models/efficientnet_b4_epoch_{epoch}.pth")
 
 if __name__ == "__main__":
     main()

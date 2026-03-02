@@ -1,15 +1,16 @@
 import os
 import sys
+
+# Add project root to sys.path so we can import from backend.*
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import threading
 import queue
 import time
 from backend.core.database import update_job_status, mark_job_failed
-import threading
 import torch
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.core.database import init_db
 from backend.pipeline.model_loader import load_all_models
